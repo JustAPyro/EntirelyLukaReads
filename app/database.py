@@ -114,6 +114,9 @@ class Segment(Base):
     users: Mapped[List['User']] = relationship(secondary=chapter_access)
     
     def generate_url(self):
+        if not self.audio_url:
+            return ''
+
         return r2_client.generate_presigned_url(
             'get_object',
             Params={'Bucket': 'elr', 'Key': self.audio_url},
