@@ -1,0 +1,65 @@
+{% extends "root.html" %}
+{% block title %}{{ book.title }} | LukaReads{% endblock %}
+{% block content %}
+    <div class="container mt-4">
+        <div class="row g-4">
+            <!-- Cover and basic info -->
+            <div class="col-12 col-md-4 text-center">
+                <img src="{{ book.cover_url or url_for('static', filename='placeholder_cover.jpg') }}"
+                     alt="{{ book.title }} cover"
+                     class="img-fluid rounded shadow"
+                     style="max-height: 350px">
+            </div>
+            <div class="col-12 col-md-8">
+                <h1>{{ book.title }}</h1>
+                <h5 class="text-muted mb-3">by {{ book.author }}</h5>
+                <ul class="list-group list-group-flush mb-3">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Total Length:</span>
+                        <span>{{ book.total_length or 'Unknown' }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Chapters:</span>
+                        <span>{{ book.total_chapters }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Chapters Narrated:</span>
+                        <span>{{ book.chapters_narrated }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Chapters Read:</span>
+                        <span>{{ book.chapters_read }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Chapters Unlocked:</span>
+                        <span>{{ book.chapters_unlocked }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Percent Narrated:</span>
+                        <span>{{ book.percent_narrated }}%</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <a href="{{ url_for("main.book_reader", book_id=1) }}"
+           class="btn btn-primary btn-lg d-block w-100 my-3">🎧 Listen</a>
+        <!-- Divider -->
+        <hr class="my-4">
+        <!-- Chapter List -->
+        <h4 class="mb-3">Chapters</h4>
+        <ul class="list-group">
+            {% for chapter in book.chapters %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <a href="">{{ chapter.title }}</a>
+                    {% if chapter.unlocked %}
+                        <span class="badge bg-success">Unlocked</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Locked</span>
+                    {% endif %}
+                </li>
+            {% else %}
+                <li class="list-group-item text-muted">No chapters available.</li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endblock %}

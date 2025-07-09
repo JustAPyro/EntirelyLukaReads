@@ -1,0 +1,145 @@
+{% extends "root.html" %}
+{% block title %}{{ book.title }} | LukaReads{% endblock %}
+{% block content %}
+    <div class="row align-items-center mb-3">
+        <div class="col-md-8">
+            <h3>{{ book.title }}</h3>
+            <p class="mb-1">
+                <strong>Author:</strong> {{ book.author }}
+            </p>
+            <p class="mb-0">
+                <strong>Total Chapters:</strong> {{ book.total_chapters }} |
+                <strong>Chapters Read:</strong> {{ book.read_count or 0 }} |
+                <strong>Percent Narrated:</strong> {{ book.narrated_percent or 0 }}%
+            </p>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <audio id="audioPlayer" controls preload="auto" style="width: 100%;">
+                <source id="audioSource"
+                        src="{{ progress.chapter.generate_url() if progress and progress.chapter and current_user in progress.chapter.users}}"
+                        type="audio/mpeg" />
+                Your browser does not support the audio element.
+            </audio>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4">
+            <img src="{{ book.cover_url or 'https://via.placeholder.com/300x400?text=Book+Cover' }}"
+                 alt="Book cover"
+                 class="img-fluid rounded shadow" />
+        </div>
+        <div class="col-md-8">
+            <h5>Chapters</h5>
+            <ul class="list-group"
+                id="chapterList"
+                style="max-height: 400px;
+                       overflow-y: auto">
+                {% for segment in segments %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center {% if progress and progress.chapter and progress.chapter.id == segment.id %}active{% endif %}"
+                        style="cursor: pointer"
+                        {% if current_user in segment.users %}
+                        data-audio-url="{{ segment.generate_url() or '' }}"
+                        data-chapter-id="{{ segment.id }}"
+                        {% endif %}>
+                        {{ segment.title }}
+                        {% if current_user in segment.users %}
+                            <span class="badge bg-success">Unlocked</span>
+                        {% else %}
+                            <span class="badge bg-danger">Locked</span>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+{% endblock %}
+{% block scripts %}
+    <script>
+const audioPlayer = document.getElementById('audioPlayer');
+const audioSource = document.getElementById('audioSource');
+const chapterList = document.getElementById('chapterList');
+const chapterItems = Array.from(chapterList.querySelectorAll('li'));
+
+// Timestamp to seek to after loading (in seconds)
+const resumeTimestamp = {{ progress.timestamp if progress and progress.timestamp else 0 }};
+
+function playChapter(item) {
+    const url = item.dataset.audioUrl;
+    if (!url) return;
+
+    audioSource.src = url;
+    audioPlayer.load();
+
+    audioPlayer.addEventListener('loadedmetadata', function seekOnce() {
+        audioPlayer.currentTime = 0;
+        audioPlayer.play();
+        audioPlayer.removeEventListener('loadedmetadata', seekOnce);
+    });
+
+    chapterItems.forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+}
+
+// Initial resume logic
+if (resumeTimestamp > 0) {
+    audioPlayer.addEventListener('loadedmetadata', function seekToProgress() {
+        console.log(resumeTimestamp)
+        audioPlayer.currentTime = resumeTimestamp;
+        audioPlayer.removeEventListener('loadedmetadata', seekToProgress);
+    });
+}
+
+chapterItems.forEach((item, index) => {
+    item.addEventListener('click', () => playChapter(item));
+    item.dataset.index = index;
+});
+
+audioPlayer.addEventListener('ended', () => {
+    const currentIndex = chapterItems.findIndex(i => i.classList.contains('active'));
+    const nextItem = chapterItems[currentIndex + 1];
+    if (nextItem && nextItem.dataset.audioUrl) {
+        playChapter(nextItem);
+    }
+});
+
+///////////////////////////////////////bin.usr-is-merged/
+
+let lastSyncTime = 0;
+const syncInterval = 15000; // 15 seconds
+
+function sendProgressUpdate(chapterId) {
+    const now = Date.now();
+    if (now - lastSyncTime < syncInterval) return;
+    lastSyncTime = now;
+
+    const timestamp = Math.floor(audioPlayer.currentTime);
+    const payload = {
+        book_id: {{ book.id }},
+        chapter_id: chapterId,
+        timestamp: timestamp
+    };
+
+    fetch('/update_progress', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify(payload)
+    }).catch(err => {
+        console.error("Progress update failed:", err);
+    });
+}
+
+// Attach listener to update while playing
+audioPlayer.addEventListener('timeupdate', () => {
+    console.log("hell!");
+    const active = chapterItems.find(i => i.classList.contains('active'));
+    if (active && active.dataset.chapterId) {
+        sendProgressUpdate(active.dataset.chapterId);
+    }
+});
+
+
+    </script>
+{% endblock %}

@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import PasswordField, StringField, SubmitField
+from wtforms import HiddenField, PasswordField, StringField, SubmitField
 from wtforms.validators import DataRequired, EqualTo, Length
 
 
@@ -37,7 +37,13 @@ from wtforms.validators import DataRequired, Length
 
 class ChapterForm(FlaskForm):
     title = StringField('Chapter Title', validators=[DataRequired(), Length(max=255)])
+    segment_id = HiddenField('segment_id')
 
+
+class BookPermissionForm(FlaskForm):
+    email = StringField('Email', validators=[
+        DataRequired(),
+    ])
 
 class BookForm(FlaskForm):
     title = StringField('Title', validators=[
@@ -57,4 +63,12 @@ class BookForm(FlaskForm):
     chapters = FieldList(FormField(ChapterForm))
 
     submit = SubmitField('Add Book')
+
+    def process_obj(self, obj):
+        self.chapters.entries.clear()
+        for chapter in obj.chapters:
+            entry = self.chapters.append_entry({
+                'segment_id': chapter.id,
+                'title': chapter.title
+            })
 

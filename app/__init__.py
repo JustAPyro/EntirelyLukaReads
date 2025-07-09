@@ -1,9 +1,17 @@
+import os
+
+import boto3
+from dotenv import load_dotenv
 from flask import Flask
 from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
 
 from app.database import Base, User
+
+load_dotenv()
+
+
 
 login_manager = LoginManager()
 login_manager.login_view = 'main.sign_in'
@@ -19,6 +27,7 @@ db = SQLAlchemy(model_class=Base)
 def create_app(create_db=True):
     app = Flask(__name__)
     app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqldb://entirelylukaread:lukareadspass@entirelylukareads.mysql.pythonanywhere-services.com/entirelylukaread$lrdb'
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('ELR_DB_URI')
     app.config['SECRET_KEY'] = 'sosec'
 
     login_manager.init_app(app)

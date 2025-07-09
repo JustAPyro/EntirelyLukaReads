@@ -1,9 +1,14 @@
+import os
+
+import boto3
 from flask import Blueprint, abort, flash, jsonify, render_template, request
 from flask_login import current_user, login_required, login_user
+from flask_wtf.csrf import CSRFError
+from werkzeug.utils import secure_filename
 
 from app import db
-from app.database import Books, Progress, Segment, User
-from app.forms import BookForm, LogInForm, SignUpForm
+from app.database import Books, Progress, Segment, User, upload_to_r2
+from app.forms import BookForm, BookPermissionForm, LogInForm, SignUpForm
 
 app = Blueprint('main', __name__)
 
@@ -14,6 +19,14 @@ from flask_login import current_user, logout_user
 @app.context_processor
 def inject_user():
     return dict(current_user=current_user)
+
+
+
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    flash(f"CSRF error: {e.description}", "danger")
+    return redirect(request.url)
+
 
 #-#-#-#-#-#-#-#-#-#- Auth Pages -#-#-#-#-#-#-#-#-#-#
 
@@ -108,25 +121,77 @@ def add_books():
 
     return render_template('books_edit.html', form=form, zip=zip, editing=False)
 
+
+@app.route('/books/<int:book_id>/permissions.html', methods=['GET', 'POST'])
+@login_required
+def books_permissions(book_id: int):
+
+    book_form = BookPermissionForm()
+    
+    book = db.get_or_404(Books, book_id)
+    if book.producer_id != current_user.id:
+        abort(403)
+
+    if book_form.validate_on_submit():
+        email = book_form.data.get('email')
+        user = db.session.query(User).filter_by(email=email).first()
+        if not user:
+            flash(f'There is no user with the email "{email}"')
+        else:
+            user.available.append(book)
+            db.session.commit()
+
+
+    return render_template('books_permissions.html', book=book, book_form=book_form)
+
+
+
+
 @app.route('/books/<int:book_id>/edit.html', methods=['GET', 'POST'])
 @login_required
-def books_edit(book_id):
+def books_edit(book_id: int):
 
     book = db.get_or_404(Books, book_id)
     if book.producer_id != current_user.id:
         abort(403)
 
+    book_form = BookForm()
 
-    if request.method == 'POST':
-        book_form = BookForm()
+    if book_form.validate_on_submit():
+        book.description = book_form.data.get('description')
+
+        for i, chapter_data in enumerate(book_form.chapters.data):
+
+            chapter_id = chapter_data.get('segment_id')
+            title = chapter_data.get('title')
+
+            print(book_form.chapters.data)
+            if not chapter_id:
+                db.session.add(Segment(
+                    book_id = book.id,
+                    title=title,
+                    position = len(book.chapters),
+                    commentary=False
+                ))
+
+                
+        flash('Production updated!')
+
+        # flash what was updated
+        db.session.commit()
+        return redirect(url_for('main.books_edit', book_id=book_id))
     else:
         book_form = BookForm(obj=book)
-        recorded_flags = []
-        for chapter in book.chapters:
-            entry = book_form.chapters.append_entry({
-                'title': chapter.title
-            })
-            recorded_flags.append(bool(chapter.audio_url))
+        book_form.process_obj(book)
+        
+
+
+    recorded_flags = []
+    for chapter in book.chapters:
+        entry = book_form.chapters.append_entry({
+            'title': chapter.title
+        })
+        recorded_flags.append(bool(chapter.audio_url))
 
 
     return render_template('books_edit.html', form=book_form, book=book, recorded_flags=recorded_flags, zip=zip)
@@ -138,7 +203,7 @@ def books():
 
     return render_template('books.html',
                            produced=current_user.produced,
-                           available=current_user.produced)
+                           available=current_user.available)
 
 
 @app.route('/books/<int:book_id>.html')
@@ -190,6 +255,73 @@ def update_progress():
     return jsonify({'success': True})
 
 #-#-#-#-#-#-#-#-#-#- End Media -#-#-#-#-#-#-#-#-#-#
+
+# CHAPTER api
+
+# Delete Chapter
+@app.route('/api/chapter/<int:chapter_id>.json', methods=['DELETE'])
+@login_required
+def chapter_api_delete(chapter_id: int):
+
+    chapter = db.get_or_404(Segment, chapter_id)
+    if chapter.book.producer_id != current_user.id:
+        abort(403)
+
+    db.session.delete(chapter)
+    db.session.commit()
+    return  jsonify({'success': True, 'message': 'Chapter deleted'}), 200
+
+# Upload a chapter audio
+@app.route('/api/chapter/<int:chapter_id>/upload.json', methods=['POST'])
+@login_required
+def chapter_api_upload(chapter_id: int):
+    file = request.files.get('audio')
+
+    if not file or not chapter_id:
+        return jsonify(success=False, error='Missing data'), 400
+
+    chapter = db.get_or_404(Segment, chapter_id)
+    if chapter.book.producer_id != current_user.id:
+        abort(403)
+ 
+    # Save the file
+    upload_to_r2(file, chapter)
+    db.session.commit()
+
+    return jsonify(success=True, audio_url=chapter.audio_url)
+
+# Lock or unlock a chapter
+@app.route('/chapters/<int:chapter_id>/access.json', methods=['POST'])
+@login_required
+def toggle_chapter_access(chapter_id: int):
+    data = request.get_json()
+    user_id = data.get('user_id')
+    action = data.get('action')  # 'lock' or 'unlock'
+
+    if not user_id or action not in {'lock', 'unlock'}:
+        return jsonify({'error': 'Invalid request'}), 400
+
+    segment = db.session.get(Segment, chapter_id)
+    user = db.session.get(User, user_id)
+
+    if not segment or not user:
+        return jsonify({'error': 'Segment or user not found'}), 404
+
+    # Check current user is the producer of this book
+    if segment.book.producer_id != current_user.id:
+        abort(403)
+
+    if action == 'unlock':
+        if user not in segment.users:
+            segment.users.append(user)
+    else:  # lock
+        if user in segment.users:
+            segment.users.remove(user)
+
+    db.session.commit()
+    return jsonify({'success': True, 'status': action})
+
+
 
 @app.route('/reader/')
 def reader():
