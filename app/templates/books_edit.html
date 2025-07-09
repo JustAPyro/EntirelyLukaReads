@@ -1,0 +1,67 @@
+{% extends "root.html" %}
+{% block title %}Sign Up | LukaReads{% endblock %}
+{% block content %}
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <h2 class="mb-4 text-center">{{'Produce a Book' if not editing else 'Edit Production'}}</h2>
+            <form method="POST" enctype="multipart/form-data">
+                {{ form.hidden_tag() }}
+                <div class="mb-3">
+                    {{ form.title.label(class="form-label") }}
+                    {{ form.title(class="form-control") }}
+                </div>
+                <div class="mb-3">
+                    {{ form.author.label(class="form-label") }}
+                    {{ form.author(class="form-control") }}
+                </div>
+                <div class="mb-3">
+                    {{ form.description.label(class="form-label") }}
+                    {{ form.description(class="form-control", rows="4") }}
+                </div>
+                <div class="mb-3">
+                    {{ form.cover.label(class="form-label") }}
+                    {{ form.cover(class="form-control") }}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Chapters</label>
+                    <div id="chapters">
+                        {% for subform, recorded in zip(form.chapters, recorded_flags) %}
+                            <div class="input-group mb-2">
+                                {{ subform.title(class="form-control") }}
+                                {% if recorded %}
+                                    <span class="input-group-text text-success">
+                                        <i class="bi bi-check-circle-fill" title="Recorded"></i>
+                                    </span>
+                                {% else %}
+                                    <span class="input-group-text text-danger">
+                                        <i class="bi bi-cloud-upload-fill" title="Missing"></i>
+                                    </span>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-sm"
+                            onclick="addChapter()">add chapter</button>
+                </div>
+
+                <div class="text-end">
+        <button type="submit" class="btn btn-primary">
+            {{ 'Save' if editing else 'Submit' }}
+        </button>
+    </div>
+            </form>
+        </div>
+    </div>
+    <script>
+function addChapter() {
+    const chaptersDiv = document.getElementById('chapters');
+    const count = chaptersDiv.children.length;
+    const newInput = document.createElement('input');
+    newInput.setAttribute('type', 'text');
+    newInput.setAttribute('name', `chapters-${count}-title`);
+    newInput.setAttribute('class', 'form-control mb-2');
+    chaptersDiv.appendChild(newInput);
+}
+    </script>
+{% endblock %}

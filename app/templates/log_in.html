@@ -1,0 +1,26 @@
+{% extends "root.html" %}
+{% block title %}Log In | LukaReads{% endblock %}
+{% block content %}
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <h2 class="mb-4 text-center">Log In to LukaReads</h2>
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="mb-3">
+                    {{ form.email.label(class="form-label") }}
+                    {{ form.email(class="form-control", placeholder="you@example.com") }}
+                    {% for error in form.email.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="mb-3">
+                    {{ form.password.label(class="form-label") }}
+                    {{ form.password(class="form-control", placeholder="Your password") }}
+                    {% for error in form.password.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="d-grid mb-3">{{ form.submit(class="btn btn-primary") }}</div>
+                <div class="text-center">
+                    <small>Don't have an account? <a href="{{ url_for("main.sign_up") }}">Sign up</a></small>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}

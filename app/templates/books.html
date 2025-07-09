@@ -1,0 +1,50 @@
+{% extends "root.html" %}
+{% block title %}Books | LukaReads{% endblock %}
+{% block content %}
+    <div class="container mt-4">
+        <h2 class="mb-3">Available Books</h2>
+        <div class="list-group mb-5">
+            {% for book in available %}
+                <a href="{{ url_for('main.book', book_id=book.id) }}"
+                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-start flex-column flex-sm-row gap-2 text-start">
+                    <!-- Left Side: Title and metadata -->
+                    <div>
+                        <strong>{{ book.title }}</strong>
+                        <br>
+                        <small class="text-muted">by {{ book.author }}</small>
+                        <br>
+                        <small class="text-muted">Produced by {{ book.producer_name or "Luka" }}</small>
+                    </div>
+                    <!-- Right Side: Progress info -->
+                    <div class="text-sm-end text-muted small">
+                        <div>📖 {{ book.chapters_read }} / {{ book.available_chapters }} read</div>
+                        <div>🎙️ {{ book.produced_chapters }} / {{ book.total_chapters }} produced</div>
+                    </div>
+                </a>
+            {% else %}
+                <p class="text-muted">No books available yet.</p>
+            {% endfor %}
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="mb-0">Productions</h2>
+            <a href="{{ url_for("main.add_books") }}" class="btn btn-success">
+                <i class="bi bi-plus-lg"></i> Add Book
+            </a>
+        </div>
+        <div class="list-group">
+            {% for book in produced %}
+                <a href="{{ url_for('main.books_edit', book_id=book.id) }}"
+                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>{{ book.title }}</strong>
+                        <br>
+                        <small class="text-muted">by You</small>
+                    </div>
+                    <span class="badge bg-info rounded-pill">{{ book.total_chapters }} chapters</span>
+                </a>
+            {% else %}
+                <p class="text-muted">You haven't produced any books yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+{% endblock %}
