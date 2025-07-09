@@ -37,7 +37,7 @@
                 {% for segment in segments %}
                     <li class="list-group-item d-flex justify-content-between align-items-center {% if progress and progress.chapter and progress.chapter.id == segment.id %}active{% endif %}"
                         style="cursor: pointer"
-                        {% if current_user in segment.users %}
+                        {% if current_user in segment.users or current_user.id == segment.book.producer_id%}
                         data-audio-url="{{ segment.generate_url() or '' }}"
                         data-chapter-id="{{ segment.id }}"
                         {% endif %}>
