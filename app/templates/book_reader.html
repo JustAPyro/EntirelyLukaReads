@@ -17,7 +17,7 @@
             <audio id="audioPlayer" controls preload="auto" style="width: 100%;">
                 <source id="audioSource"
                         src="{{ progress.chapter.generate_url() if progress and progress.chapter and current_user in progress.chapter.users}}"
-                        type="audio/mpeg" />
+                        type="audio/mp4" />
                 Your browser does not support the audio element.
             </audio>
         </div>
