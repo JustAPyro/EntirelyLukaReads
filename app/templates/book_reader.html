@@ -42,7 +42,7 @@
                         data-chapter-id="{{ segment.id }}"
                         {% endif %}>
                         {{ segment.title }}
-                        {% if current_user in segment.users %}
+                        {% if current_user in segment.users or current_user.id == segment.book.producer_id%}
                             <span class="badge bg-success">Unlocked</span>
                         {% else %}
                             <span class="badge bg-danger">Locked</span>
