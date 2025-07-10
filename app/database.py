@@ -115,7 +115,7 @@ class Segment(Base):
     
     def generate_url(self):
         if not self.audio_url:
-            return ''
+            return None
 
         return r2_client.generate_presigned_url(
             'get_object',
