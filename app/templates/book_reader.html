@@ -42,10 +42,12 @@
                         data-chapter-id="{{ segment.id }}"
                         {% endif %}>
                         {{ segment.title }}
-                        {% if current_user in segment.users or current_user.id == segment.book.producer_id%}
-                            <span class="badge bg-success">Unlocked</span>
+                        {% if current_user not in segment.users and current_user.id != segment.book.producer_id %}
+                                                    <span class="badge bg-danger">Locked</span>
+                        {% elif segment.audio_url is none %}
+                            <span class="badge bg-danger">Missing</span>
                         {% else %}
-                            <span class="badge bg-danger">Locked</span>
+                            <span class="badge bg-success">Unlocked</span>
                         {% endif %}
                     </li>
                 {% endfor %}
