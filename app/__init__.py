@@ -28,6 +28,7 @@ def create_app(create_db=True):
     app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqldb://entirelylukaread:lukareadspass@entirelylukareads.mysql.pythonanywhere-services.com/entirelylukaread$lrdb'
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('ELR_DB_URI')
     app.config['SECRET_KEY'] = 'sosec'
+    app.config['SQLALCHEMY_POOL_RECYCLE'] = 280
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
         'pool_pre_ping': True
     }
